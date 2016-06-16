@@ -15,30 +15,23 @@ func TestCreateNewConnecton(t *testing.T) {
 		name         string
 		ip           string
 		expectedName string
-<<<<<<< HEAD
-		expectedIp   string
-=======
 		expectedIP   string
->>>>>>> dev
 	}{
 		{true, "device1", "1.1.1.1", "device1", "1.1.1.1"},
 		{true, "device2", "2.2.2.2", "device2", "2.2.2.2"},
 		{true, "device3", "3.3.3.3", "device3", "3.3.3.3"},
 		{false, "device4", "4.4.4.4", "device5", "5.5.5.5"},
 	} {
-<<<<<<< HEAD
-		dev := newConnection(test.name, test.ip)
-		if test.passes == (dev.name != test.expectedName) {
-			t.Errorf("Expected %v, got %v", test.expectedName, dev.name)
-		} else if test.passes == (dev.ip != test.expectedIp) {
-			t.Errorf("Expected %v, got %v", test.expectedIp, dev.ip)
-=======
 		dev := NewDevice(test.name, test.ip)
 		if test.passes == (dev.name != test.expectedName) {
 			t.Errorf("Expected %v, got %v", test.expectedName, dev.name)
 		} else if test.passes == (dev.ip != test.expectedIP) {
 			t.Errorf("Expected %v, got %v", test.expectedIP, dev.ip)
->>>>>>> dev
 		}
 	}
+}
+
+func TestGetUserAndPassword(t *testing.T) {
+    dev := NewDevice("None", "None")
+    dev.GetUserAndPassword()
 }
