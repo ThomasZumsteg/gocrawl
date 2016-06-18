@@ -17,8 +17,9 @@ gocrawl <ip_address>
 Begin the crawl
 
 options include
--b, --background to run in the background
--d, --database <file> use the specified database file
--v, --verbose run in verbose mode
---debug <level> set the debug level
+-background to run in the background
+-database <file> use the specified database file
+-debug <level> set the debug level
+-ignore pattern skips hosts that match some pattern
+-verbose run in verbose mode
 

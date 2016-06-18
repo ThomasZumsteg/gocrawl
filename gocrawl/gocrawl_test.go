@@ -30,8 +30,3 @@ func TestCreateNewConnecton(t *testing.T) {
 		}
 	}
 }
-
-func TestGetUserAndPassword(t *testing.T) {
-    dev := NewDevice("None", "None")
-    dev.GetUserAndPassword()
-}
