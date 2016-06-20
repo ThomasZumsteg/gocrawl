@@ -10,12 +10,6 @@ import (
     "os"
 )
 
-type Config struct {
-    UserName string
-    Password string
-    Debug int
-}
-
 
 func main() {
 	var backgroundPtr = flag.Bool("background", false, "Runs the command in the background")
@@ -43,23 +37,12 @@ func main() {
 		logger.Printf("\t%s", root)
 	}
 
-    configFile, loggerErr := os.Open("config.json")
-    if loggerErr != nil {
+    f, err := os.Open("config.json")
+    if err != nil {
         logger.Print("Could not open config file")
-        return
+        return 
     }
 
-    decoder := json.NewDecoder(configFile)
-    config := Config{}
-    decorderErr := decoder.Decode(&config)
-    if decorderErr != nil {
-        logger.Print("Config files appears to be incorrectly formatted")
-        return
-    }
-
-    logger.Print("The username is: ", config.UserName)
-    logger.Print("The password is: ", config.Password)
-    logger.Print("The config debug level is: ", config.Debug)
 
 	// If Database isn't a file, confirm overwrite
 	//
