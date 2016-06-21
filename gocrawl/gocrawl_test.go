@@ -1,15 +1,21 @@
 package gocrawl
 
 import (
+    "flag"
+    "fmt"
+    "os"
 	"testing"
 )
 
 const testVersion = 1
 
-func TestCreateNewConnecton(t *testing.T) {
+func TestTestVersion(t *testing.T) {
 	if TestVersion != testVersion {
 		t.Errorf("TestVerions done match: Test version %v, module version %v", testVersion, TestVersion)
 	}
+}
+
+func TestCreateNewConnecton(t *testing.T) {
 	for _, test := range []struct {
 		passes       bool
 		name         string
@@ -29,4 +35,24 @@ func TestCreateNewConnecton(t *testing.T) {
 			t.Errorf("Expected %v, got %v", test.expectedIP, dev.ip)
 		}
 	}
+}
+
+func TestConnect(t *testing.T) {
+    fmt.Println(*hostNamePtr)
+    dev := NewDevice(*hostNamePtr, *hostIpPtr)
+    dev.Connect(*userPtr, *passPtr, "show ver")
+}
+
+var userPtr *string
+var passPtr *string
+var hostNamePtr *string
+var hostIpPtr *string
+
+func TestMain(m *testing.M) {
+    userPtr = flag.String("user", "", "The user to test ssh connections")
+    passPtr = flag.String("pass", "", "The password to test ssh connection")
+    hostNamePtr = flag.String("name", "", "The hostname for the device")
+    hostIpPtr = flag.String("ip", "", "The IP of the device")
+    flag.Parse()
+    os.Exit(m.Run())
 }
