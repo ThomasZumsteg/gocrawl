@@ -1,8 +1,10 @@
 package gocrawl
 
 import (
+    "bytes"
 	"fmt"
     "golang.org/x/crypto/ssh"
+    // "time"
 )
 
 // TestVersion is the version that the unit tests are run against
@@ -28,15 +30,19 @@ func (dev *Device) GetUserAndPassword() {
 }
 
 // Connect sends a command to the device
-func (dev *Device) Connect(user, password, command string) {
+func (dev *Device) Connect(user, password, command string) string {
     config := &ssh.ClientConfig{
         User: user,
         Auth: []ssh.AuthMethod{ssh.Password(password)},
     }
 
-    conn, _ := ssh.Dial("TCP", dev.name+"22", config)
+    conn, _ := ssh.Dial("tcp", dev.name+":22", config)
     session, _ := conn.NewSession()
     defer session.Close()
 
+    var buffer bytes.Buffer
+    session.Stdout = &buffer
     session.Run(command)
+
+    return buffer.String()
 }

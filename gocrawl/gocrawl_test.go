@@ -1,9 +1,6 @@
 package gocrawl
 
 import (
-    "flag"
-    "fmt"
-    "os"
 	"testing"
 )
 
@@ -37,22 +34,9 @@ func TestCreateNewConnecton(t *testing.T) {
 	}
 }
 
-func TestConnect(t *testing.T) {
-    fmt.Println(*hostNamePtr)
-    dev := NewDevice(*hostNamePtr, *hostIpPtr)
-    dev.Connect(*userPtr, *passPtr, "show ver")
+func TestMakeConnect(t *testing.T) {
+    dev := NewDevice(HOSTNAME, HOSTIP)
+    output := dev.Connect(USER, PASS, "show ver\r")
+    t.Log(output)
 }
 
-var userPtr *string
-var passPtr *string
-var hostNamePtr *string
-var hostIpPtr *string
-
-func TestMain(m *testing.M) {
-    userPtr = flag.String("user", "", "The user to test ssh connections")
-    passPtr = flag.String("pass", "", "The password to test ssh connection")
-    hostNamePtr = flag.String("name", "", "The hostname for the device")
-    hostIpPtr = flag.String("ip", "", "The IP of the device")
-    flag.Parse()
-    os.Exit(m.Run())
-}
