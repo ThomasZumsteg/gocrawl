@@ -1,9 +1,10 @@
 package gocrawl
 
 import (
-    "bytes"
+    // "bytes"
 	"fmt"
     "golang.org/x/crypto/ssh"
+	"log"
     // "time"
 )
 
@@ -31,6 +32,7 @@ func (dev *Device) GetUserAndPassword() {
 
 // Connect sends a command to the device
 func (dev *Device) Connect(user, password, command string) string {
+    // Check here http://stackoverflow.com/questions/21126195/talking-to-cisco-equipment-using-go-ssh-library
     config := &ssh.ClientConfig{
         User: user,
         Auth: []ssh.AuthMethod{ssh.Password(password)},
@@ -40,9 +42,28 @@ func (dev *Device) Connect(user, password, command string) string {
     session, _ := conn.NewSession()
     defer session.Close()
 
-    var buffer bytes.Buffer
-    session.Stdout = &buffer
-    session.Run(command)
+	stdout, _ := session.StdoutPipe()
+	stdin, _ := session.StdinPipe()
 
-    return buffer.String()
+	modes := ssh.TerminalModes{
+		ssh.ECHO:          0,     // disable echoing
+		ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
+		ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
+	}
+
+	// Request pseudo terminal
+	if err := session.RequestPty("xterm", 80, 40, modes); err != nil {
+		log.Fatalf("request for pseudo terminal failed: %s", err)
+	}
+	// Start remote shell
+	if err := session.Shell(); err != nil {
+		log.Fatalf("failed to start shell: %s", err)
+	}
+
+    stdin.Write([]byte("show ver\r"))
+
+	output := make([]byte, 2048)
+    n, _ := stdout.Read(output)
+
+    return string(output[:n])
 }
