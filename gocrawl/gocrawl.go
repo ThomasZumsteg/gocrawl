@@ -4,8 +4,8 @@ import (
     // "bytes"
 	"fmt"
     "golang.org/x/crypto/ssh"
-	"log"
-    // "time"
+	// "log"
+    "time"
 )
 
 // TestVersion is the version that the unit tests are run against
@@ -45,25 +45,21 @@ func (dev *Device) Connect(user, password, command string) string {
 	stdout, _ := session.StdoutPipe()
 	stdin, _ := session.StdinPipe()
 
-	modes := ssh.TerminalModes{
-		ssh.ECHO:          0,     // disable echoing
-		ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
-		ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
-	}
+    modes := ssh.TerminalModes{
+        ssh.ECHO:          0,     // disable echoing
+        ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
+        ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
+    }
 
-	// Request pseudo terminal
-	if err := session.RequestPty("xterm", 80, 40, modes); err != nil {
-		log.Fatalf("request for pseudo terminal failed: %s", err)
-	}
-	// Start remote shell
-	if err := session.Shell(); err != nil {
-		log.Fatalf("failed to start shell: %s", err)
-	}
+    session.RequestPty("xterm", 0, 200, modes)
+    session.Shell()
+    time.Sleep(10 * time.Second)
 
     stdin.Write([]byte("show ver\r"))
+    time.Sleep(10 * time.Second)
 
-	output := make([]byte, 2048)
-    n, _ := stdout.Read(output)
+    buff := make([]byte, 2048)
+    n, _ := stdout.Read(buff)
 
-    return string(output[:n])
+    return string(buff[:n])
 }
