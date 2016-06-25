@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-const testVersion = 1
+const testVersion = 2
 
 func TestTestVersion(t *testing.T) {
 	if TestVersion != testVersion {
@@ -12,31 +12,14 @@ func TestTestVersion(t *testing.T) {
 	}
 }
 
-func TestCreateNewConnecton(t *testing.T) {
-	for _, test := range []struct {
-		passes       bool
-		name         string
-		ip           string
-		expectedName string
-		expectedIP   string
-	}{
-		{true, "device1", "1.1.1.1", "device1", "1.1.1.1"},
-		{true, "device2", "2.2.2.2", "device2", "2.2.2.2"},
-		{true, "device3", "3.3.3.3", "device3", "3.3.3.3"},
-		{false, "device4", "4.4.4.4", "device5", "5.5.5.5"},
-	} {
-		dev := NewDevice(test.name, test.ip)
-		if test.passes == (dev.name != test.expectedName) {
-			t.Errorf("Expected %v, got %v", test.expectedName, dev.name)
-		} else if test.passes == (dev.ip != test.expectedIP) {
-			t.Errorf("Expected %v, got %v", test.expectedIP, dev.ip)
-		}
-	}
+func TestConnect(t *testing.T) {
+    dev := Device{ "Hostname" }
+    stdout, stdin, err := OpenConnection("Hostname", "Username", "Password", stubConnection)
+    if err != nil {
+        t.Error("Got an error on connect")
+    }
 }
 
-func TestMakeConnect(t *testing.T) {
-    dev := NewDevice(HOSTNAME, HOSTIP)
-    output := dev.Connect(USER, PASS, "show ver\r")
-    t.Log(output)
-}
+func TestSendCommand(t *testing.T) {
+    stdout, stdin, err := OpenConnection("Hostname", "Username", "Password", 
 
