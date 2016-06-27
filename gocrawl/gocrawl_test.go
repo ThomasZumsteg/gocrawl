@@ -4,22 +4,44 @@ import (
 	"testing"
 )
 
-const testVersion = 2
+const version = 2
 
-func TestTestVersion(t *testing.T) {
-	if TestVersion != testVersion {
-		t.Errorf("TestVerions done match: Test version %v, module version %v", testVersion, TestVersion)
+func TestVersion(t *testing.T) {
+	if Version != version {
+		t.Errorf("Verions done match: Test version %v, module version %v", version, Version)
 	}
 }
 
-func TestConnect(t *testing.T) {
-    dev := Device{ "Hostname" }
-    stdout, stdin, err := OpenConnection("Hostname", "Username", "Password", stubConnection)
+func TestCreateDevice(t *testing.T) {
+    dev := NewDevice( "Hostname" )
+    if dev.Hostname != "Hostname" {
+        t.Error("Got an error on connect")
+    }
+}
+
+func TestCreateConnection(t *testing.T) {
+    dev := NewDevice( "Hostname" )
+    err := dev.Connect("Username", "Password")
     if err != nil {
         t.Error("Got an error on connect")
     }
 }
 
-func TestSendCommand(t *testing.T) {
-    stdout, stdin, err := OpenConnection("Hostname", "Username", "Password", 
+func TestSend(t *testing.T) {
+    dev := NewDevice( "Hostname" )
+    err := dev.Connect("Username", "Password")
+    response, err := dev.Send("command")
+    if err != nil {
+        t.Errorf("No error expected, got: %v", err)
+    } else if response != "response" {
+        t.Error("Expected \"response\": got " + response)
+    }
+}
 
+func TestConnectError(t *testing.T) {
+    dev := NewDevice( "Hostname" )
+    err := dev.Connect("Username", "Password")
+    if err != nil {
+        t.Error("Error was expected, no error returned")
+    }
+}
