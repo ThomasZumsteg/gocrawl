@@ -8,53 +8,41 @@ import (
 // TestVersion is the version that the unit tests are run against
 const Version = 2
 
-type RemoteClient interface {
-    NewSession() (RemoteSession, error)
-}
-
-type RemoteSession interface {
+//remoteSession is an individual communication channel with a RemoteClient 
+//it wraps ssh.Session for dependency injection to implement unit testing
+type remoteSession interface {
     StderrPipe() (io.Reader, error)
     StdinPipe() (io.WriteCloser, error)
     RequestPty(term string, h, w int, termmodes ssh.TerminalModes) error
     Shell() error
 }
 
-type device struct {
+//Device 
+type Device struct {
     Hostname string
-    stdin chan string
-    stdout chan string
-    Dial func(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error)
+    Stdin chan string
+    Stdout chan string
+    session remoteSession
 }
 
-func NewDevice(hostname string) device {
-    return device{
+func NewDevice(hostname string) Device {
+    return Device{
         Hostname : hostname,
-        stdin : nil,
-        stdout : nil,
-        Dial : ssh.Dial,
+        Stdin : nil,
+        Stdout : nil,
+        session: getSession(),
     }
 }
 
-func NewStubDevice(hostname string, responses map[string]string) device {
-    return device{
-        Hostname : hostname,
-        stdin : nil,
-        stdout : nil,
-        Dial : StubDial(responses),
-    }
-}
-
-func StubDial(commandResponse map[string]string) func(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
-    stubDial := func(network, add string, config *ssh.ClientConfig) (*ssh.Client, error) {
-        return nil, nil
-    }
-    return stubDial
-}
-
-func (dev device) Connect(user, pass string) error {
+func getSession() remoteSession {
     return nil
 }
 
-func (dev device) Send(command string) (string, error) {
+
+func (dev Device) Connect(user, pass string) error {
+    return nil
+}
+
+func (dev Device) Send(command string) (string, error) {
     return "response", nil
 }
