@@ -4,6 +4,7 @@ import (
     "bytes"
     "fmt"
     "io"
+    "time"
     "golang.org/x/crypto/ssh"
 )
 
@@ -19,12 +20,17 @@ type remoteSession interface {
     Shell() error
 }
 
-//Device 
+type response struct {
+    text string
+    err error
+}
+
+//Device is a remote device that can communicate by sending commands to Stdin
+// and recieves responses from Stdout
 type Device struct {
     Hostname string
-    Stdin chan string
-    Stdout chan string
-    session remoteSession
+    Stdin io.WriteCloser
+    Stdout chan response
 }
 
 func NewDevice(hostname string) Device {
@@ -32,15 +38,10 @@ func NewDevice(hostname string) Device {
         Hostname : hostname,
         Stdin : nil,
         Stdout : nil,
-        session: getSession(),
     }
 }
 
-func getSession() remoteSession {
-    return nil
-}
-
-func (dev Device) Connect(user, pass string) error {
+func (dev *Device) Connect(user, pass string) error {
     config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
@@ -48,7 +49,7 @@ func (dev Device) Connect(user, pass string) error {
 		},
 	}
 
-    client, clientErr := ssh.Dial("tcp", dev.Hostname, config)
+    client, clientErr := ssh.Dial("tcp", dev.Hostname+":22", config)
     if clientErr != nil {
         return fmt.Errorf("Dialing %s failed: %v", dev.Hostname, clientErr)
     }
@@ -58,8 +59,9 @@ func (dev Device) Connect(user, pass string) error {
         return fmt.Errorf("Creating a session failed: %v", sessionErr)
     }
 
-    sshOut, stdOutErr := session.StdoutPipe()
-    if stdOutErr != nil {
+    if sshOut, stdOutErr := session.StdoutPipe(); stdOutErr == nil {
+        dev.assignStdout(sshOut)
+    } else {
         return fmt.Errorf("Stdout pipe failed: %v", stdOutErr)
     }
 
@@ -67,6 +69,7 @@ func (dev Device) Connect(user, pass string) error {
     if stdInErr != nil {
         return fmt.Errorf("Stdin pipe failed: %v", stdInErr)
     }
+    dev.Stdin = sshIn
 
     modes := ssh.TerminalModes{
         ssh.ECHO:          0,     // disable echoing
@@ -84,33 +87,34 @@ func (dev Device) Connect(user, pass string) error {
         return fmt.Errorf("Shell failed: %v", shellErr)
     }
 
-    dev.Stdin = makeStdin(sshIn)
-    dev.Stdout = makeStdout(sshOut)
-
     return nil
 }
 
-func makeStdin(sshIn io.WriteCloser) chan string {
-    stdin := make(chan string)
+func (dev *Device) assignStdout(source io.Reader) {
+    dev.Stdout = make(chan response)
+    timeout := time.Millisecond * 100
+    terminator := []byte(">")
     go func() {
-        for command := range stdin {
-            sshIn.Write([]byte(command))
+        var buff []byte
+        bytes_read := 0
+        err := error(nil)
+        var output bytes.Buffer
+        for start := time.Now();; time.Sleep(timeout) {
+            if time.Now().After(start.Add(timeout * 10)) {
+                dev.Stdout <- response{ "", fmt.Errorf("Timed out") }
+            }
+
+            bytes_read, err = source.Read(buff)
+            if err != nil {
+                dev.Stdout <- response{"", fmt.Errorf("Error on read: %s", err)}
+            }
+            output.Write(buff[:bytes_read])
+
+            if bytes.HasSuffix(buff[:bytes_read], terminator) {
+                dev.Stdout <- response{output.String(), nil}
+                output.Reset()
+            }
         }
     }()
-    return stdin
 }
 
-func makeStdout(sshOut io.Reader) chan string {
-    stdout := make(chan string)
-    go func() {
-        var command bytes.Buffer
-        for ;; {
-            if bytes.HasSuffix(command, []byte(prompt)) {
-                stdout <- command.
-                command.Reset()
-    return stdout
-}
-
-func (dev Device) Send(command string) (string, error) {
-    return "response", nil
-}
