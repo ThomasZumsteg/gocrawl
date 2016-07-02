@@ -1,10 +1,9 @@
 package gocrawl
 
 import (
-    "bytes"
     "fmt"
     "io"
-    "time"
+    // "time"
     "golang.org/x/crypto/ssh"
 )
 
@@ -65,54 +64,58 @@ func (dev *Device) Connect(user, pass string) error {
         return fmt.Errorf("Stdout pipe failed: %v", stdOutErr)
     }
 
-    sshIn, stdInErr := session.StdinPipe()
-    if stdInErr != nil {
+    if sshIn, stdInErr := session.StdinPipe(); stdInErr == nil {
+        dev.Stdin = sshIn
+    } else {
         return fmt.Errorf("Stdin pipe failed: %v", stdInErr)
     }
-    dev.Stdin = sshIn
 
     modes := ssh.TerminalModes{
-        ssh.ECHO:          0,     // disable echoing
-        ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
-        ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
+        ssh.ECHO:          1,     // disable echoing
+        ssh.TTY_OP_ISPEED: 144000, // input speed = 14.4kbaud
+        ssh.TTY_OP_OSPEED: 144000, // output speed = 14.4kbaud
     }
 
-    ptyErr := session.RequestPty("vt100", 80, 0, modes)
-    if ptyErr != nil {
+    if ptyErr := session.RequestPty("xterm", 80, 0, modes); ptyErr != nil {
         return fmt.Errorf("Request Pty failed: %v", ptyErr)
     }
 
-    shellErr := session.Shell()
-    if shellErr != nil {
+    if shellErr := session.Shell(); shellErr != nil {
         return fmt.Errorf("Shell failed: %v", shellErr)
     }
 
     return nil
 }
 
+func bufferedRead(source io.Reader) (chan string, chan error) {
+    buff := make([]byte, 1000)
+    outChan := make(chan string)
+    errChan  := make(chan error)
+    go func() {
+        for {
+            if bytes_read, err := source.Read(buff); err != nil {
+                errChan <- fmt.Errorf("Error on read: %s", err)
+            } else if bytes_read > 0 {
+                fmt.Println("Sending")
+                outChan <- string(buff[:bytes_read])
+            }
+        }
+    }()
+    return outChan, errChan
+}
+
 func (dev *Device) assignStdout(source io.Reader) {
     dev.Stdout = make(chan response)
-    timeout := time.Millisecond * 100
-    terminator := []byte(">")
     go func() {
-        var buff []byte
-        bytes_read := 0
-        err := error(nil)
-        var output bytes.Buffer
-        for start := time.Now();; time.Sleep(timeout) {
-            if time.Now().After(start.Add(timeout * 10)) {
-                dev.Stdout <- response{ "", fmt.Errorf("Timed out") }
-            }
-
-            bytes_read, err = source.Read(buff)
-            if err != nil {
-                dev.Stdout <- response{"", fmt.Errorf("Error on read: %s", err)}
-            }
-            output.Write(buff[:bytes_read])
-
-            if bytes.HasSuffix(buff[:bytes_read], terminator) {
-                dev.Stdout <- response{output.String(), nil}
-                output.Reset()
+        var output string
+        fragments, errs := bufferedRead(source)
+        for {
+            select {
+            case fragment := <-fragments:
+                fmt.Println(fragment)
+                output += fragment
+            case <-errs:
+                return
             }
         }
     }()
