@@ -3,6 +3,7 @@ package gocrawl
 import (
     "fmt"
     "io"
+    "strings"
     // "time"
     "golang.org/x/crypto/ssh"
 )
@@ -96,7 +97,6 @@ func bufferedRead(source io.Reader) (chan string, chan error) {
             if bytes_read, err := source.Read(buff); err != nil {
                 errChan <- fmt.Errorf("Error on read: %s", err)
             } else if bytes_read > 0 {
-                fmt.Println("Sending")
                 outChan <- string(buff[:bytes_read])
             }
         }
@@ -112,8 +112,11 @@ func (dev *Device) assignStdout(source io.Reader) {
         for {
             select {
             case fragment := <-fragments:
-                fmt.Println(fragment)
                 output += fragment
+                if strings.HasSuffix(output, ">") {
+                    dev.Stdout <- response{ output, nil }
+                    output = ""
+                }
             case <-errs:
                 return
             }

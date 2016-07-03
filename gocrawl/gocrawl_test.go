@@ -2,6 +2,7 @@
 package gocrawl
 
 import (
+    "fmt"
 	"testing"
 )
 
@@ -29,12 +30,23 @@ func TestSendCommand(t *testing.T) {
     if err := dev.Connect(USER, PASS); err != nil {
         t.Errorf("Got an error on connect %s", err)
     }
+
+    fmt.Println("Reading welcome message")
     if response := <-dev.Stdout; response.err == nil {
         t.Logf("Got: %s", response.text)
     } else {
         t.Errorf("Failed to read welcome message: %v", response.err)
     }
 
+    fmt.Println("Sending command")
     dev.Stdin.Write([]byte("show ver"))
+
+    fmt.Println("Reading response")
+    if response := <-dev.Stdout; response.err == nil {
+        t.Logf("Got: %s", response.text)
+    } else {
+        t.Errorf("Failed to read message: %v", response.err)
+    }
+    close (dev.Stdout)
 }
 
