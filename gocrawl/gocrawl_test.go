@@ -1,8 +1,7 @@
-// +build unit
 package gocrawl
 
 import (
-    "fmt"
+    // "log"
 	"testing"
 )
 
@@ -16,37 +15,33 @@ func TestVersion(t *testing.T) {
 
 func TestConnect(t *testing.T) {
     dev := NewDevice(HOSTNAME)
-    if err := dev.Connect(USER, PASS); err != nil {
+    if welcome, err := dev.Connect(USER, PASS); err != nil {
         t.Errorf("Got an error on connect %s", err)
-    } else if dev.Stdout == nil {
+    } else if dev.stdout == nil {
         t.Error("Stdout is nil")
-    } else if dev.Stdin == nil {
+    } else if dev.stdin == nil {
         t.Error("Stdin is nil")
+    } else if welcome == "" {
+        t.Error("Empty welcome message")
+    } else {
+        t.Logf("Got welcome message\n----------\n%s\n---------", welcome)
     }
 }
 
 func TestSendCommand(t *testing.T) {
     dev := NewDevice(HOSTNAME)
-    if err := dev.Connect(USER, PASS); err != nil {
+    t.Logf("Connecting")
+    if _, err := dev.Connect(USER, PASS); err != nil {
         t.Errorf("Got an error on connect %s", err)
-    }
-
-    fmt.Println("Reading welcome message")
-    if response := <-dev.Stdout; response.err == nil {
-        t.Logf("Got: %s", response.text)
     } else {
-        t.Errorf("Failed to read welcome message: %v", response.err)
+        t.Logf("Connected")
     }
 
-    fmt.Println("Sending command")
-    dev.Stdin.Write([]byte("show ver"))
+    t.Logf("Sending command")
 
-    fmt.Println("Reading response")
-    if response := <-dev.Stdout; response.err == nil {
-        t.Logf("Got: %s", response.text)
+    if response, err := dev.Send("show ver"); err == nil {
+        t.Logf("Got: %s", response)
     } else {
-        t.Errorf("Failed to read message: %v", response.err)
+        t.Errorf("Failed to read message: %v", err)
     }
-    close (dev.Stdout)
 }
-

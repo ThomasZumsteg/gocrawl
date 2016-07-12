@@ -1,10 +1,8 @@
 package main
 
 import (
-	// "./gocrawl"
 	"encoding/json"
 	"flag"
-	// "fmt"
     "io"
 	"log"
     "os"
