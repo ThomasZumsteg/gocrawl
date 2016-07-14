@@ -2,6 +2,7 @@ gocrawl
 =======
 
 The purpose of this document is to make notes about how gocrawl should work under the hood. The idea is to wrap the relatively complex ssh connection between a Cisco iOS device in set of channels sort a command/response type architecture. Basic work flow would be something like
+
 ```
 dev := NewDevice(hostname)
 if err := dev.Connect(user, passwd); err == nil {
@@ -23,11 +24,13 @@ for _, command := range commands {
     }
 }
 ```
+
 output should be free of extra information like the command prompt and just contain the response from the command. Additionally, the device should handle timeout issues, adding little things like "\r" to the end of the commands, establishing the prompt, etc.
 
 
 Ideas
 -----
+
 **`connect` should be a separate procedure**
 
 _pro_
@@ -42,3 +45,7 @@ _cons_
 
 _decision_
 Connnect should be a seperate procedure to allow for multiple connection attempts and to allow the calling program to handle cases where the connection fails
+
+**Get output from timed out command**
+There needs to be a way to get the output from the `Send` command when the call has timed out.
+

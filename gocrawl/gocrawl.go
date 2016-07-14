@@ -28,29 +28,28 @@ type Device struct {
     Hostname string
     stdin io.WriteCloser
     stdout io.Reader
-    logger *log.Logger
+    conLog *log.Logger
     timeout time.Duration
     prompt string
 }
 
 //NewDevice creates a new network device
 func NewDevice(hostname string) Device {
-    logger := log.New(os.Stdout, hostname + ": ", 0)
+    logger := log.New(os.Stdout, "", 0)
     if logFile, err := os.OpenFile(hostname + ".log", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666); err == nil {
-        fmt.Print("Opened file")
-        logger = log.New(logFile, hostname + ": ", 0)
+        logger = log.New(logFile, "", 0)
     } else {
-        logger.Printf("Failed to open logfile: %s", err)
+        logger.Printf("Failed to open logfile for %s: %s", hostname, err)
     }
     dev := Device{
         Hostname : hostname,
         stdin : nil,
         stdout : nil,
-        logger: logger,
+        conLog: logger,
         timeout: 30 * time.Second,
         prompt: ">",
     }
-    dev.logger.Print("New device")
+    dev.conLog.Printf("New device: %s\n", hostname)
     return dev
 }
 
@@ -120,42 +119,50 @@ func (dev *Device) Send(command string) (string, error) {
         return "", fmt.Errorf("Error on write: %s", err)
     }
 
-    response_chan, err_chan := dev.bufferedRead(command, dev.prompt)
+    output, done, errChan := dev.bufferedRead(command, dev.prompt)
     select {
-    case response := <-response_chan:
-        return response, nil
-    case err := <-err_chan:
+    case <-done:
+        return <-output, nil
+    case err := <-errChan:
         return "", fmt.Errorf("Error on read: %s", err)
     case <-time.After(dev.timeout):
-        return "", fmt.Errorf("Device timedout after %s", dev.timeout)
+        return <-output, fmt.Errorf("Device timedout after %s", dev.timeout)
     }
 }
 
 //bufferedRead parses responses into a reply/resonse pattern
-func (dev *Device) bufferedRead(prefix, suffix string) (chan string, chan error) {
+func (dev *Device) bufferedRead(prefix, suffix string) (chan string, chan bool, chan error) {
     buff := make([]byte, 1000)
     outChan := make(chan string)
+    outChan <- ""
+    doneChan := make(chan bool)
     errChan  := make(chan error)
 
-    dev.logger.Print("---------Reader---------\n")
     go func() {
-        output := ""
         for {
-            if bytes_read, err := dev.stdout.Read(buff); err != nil {
+            bytes_read, err := dev.stdout.Read(buff)
+            if ; err != nil {
                 errChan <- fmt.Errorf("Error on read: %s", err)
-            } else if bytes_read > 0 {
-                dev.logger.Print(string(buff[:bytes_read]))
-                output += string(buff[:bytes_read])
+            } else if bytes_read == 0 {
+                continue
             }
 
+            output := <-outChan
+            done := false
+            dev.conLog.Printf(string(buff[:bytes_read]))
+            output += string(buff[:bytes_read])
+
             if strings.HasSuffix(output, suffix) {
-                dev.logger.Printf("--------Done----------\n%s", output)
                 output = strings.TrimPrefix(output, prefix)
                 output = strings.TrimSuffix(output, suffix)
-                outChan <- output
+            }
+
+            outChan <- output
+            if done {
+                doneChan <- done
                 return
             }
         }
     }()
-    return outChan, errChan
+    return outChan, doneChan, errChan
 }
